@@ -4,7 +4,7 @@ If you dont have it installed yet
 <a href="https://www.php.net/manual/en/install.php">Install PHP 7.1 or later </a>
 <a href="https://getcomposer.org/download/">Install composer</a>
 
-## Console command
+## Install
 
 ```
 git clone https://github.com/maximw/roomba.git
@@ -18,7 +18,7 @@ cd ./roomba
 composer update
 ```
 
-Run console command:
+## Console command
 
 ```
 php ./bin/console run <input.json> <output.json>
