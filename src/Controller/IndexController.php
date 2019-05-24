@@ -18,7 +18,7 @@ class IndexController
      * @param Request $request
      * @return JsonResponse
      */
-    public function indexAction(Request $request): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $jsonRunner = new JsonRunner();
         $report = $jsonRunner->run($request->getContent());
