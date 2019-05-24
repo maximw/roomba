@@ -4,7 +4,14 @@
 namespace App\Service\Robot;
 
 
+use App\Exceptions\RobotException;
 
+/**
+ * Class represents Robots position and facing
+ *
+ * Class RobotPosition
+ * @package App\Service\Robot
+ */
 class RobotPosition
 {
 
@@ -16,7 +23,6 @@ class RobotPosition
     protected const FACINGS = [
         self::FACING_N, self::FACING_E, self::FACING_S, self::FACING_W,
     ];
-
 
     /**
      * @var int
@@ -40,6 +46,11 @@ class RobotPosition
         $this->setFacing($facing);
     }
 
+    /**
+     * Turn position facing to right
+     *
+     * @return RobotPosition
+     */
     public function turnRight(): RobotPosition
     {
         $index = array_search($this->facing, static::FACINGS);
@@ -51,6 +62,11 @@ class RobotPosition
         return $this;
     }
 
+    /**
+     * Turn position facing to left
+     *
+     * @return RobotPosition
+     */
     public function turnLeft(): RobotPosition
     {
         $index = array_search($this->facing, static::FACINGS);
@@ -62,6 +78,12 @@ class RobotPosition
         return $this;
     }
 
+    /**
+     * Advance
+     *
+     * @return RobotPosition
+     * @throws RobotException
+     */
     public function move(): RobotPosition
     {
         switch ($this->facing) {
@@ -78,11 +100,17 @@ class RobotPosition
                 $this->x--;
                 break;
             default:
-                throw new \Exception('Unknown facing');
+                throw new RobotException('Unknown facing');
         }
         return $this;
     }
 
+    /**
+     * Move back
+     *
+     * @return RobotPosition
+     * @throws RobotException
+     */
     public function moveBack(): RobotPosition
     {
         switch ($this->facing) {
@@ -99,15 +127,34 @@ class RobotPosition
                 $this->x++;
                 break;
             default:
-                throw new \Exception('Unknown facing');
+                throw new RobotException('Unknown facing');
         }
         return $this;
     }
 
+    /**
+     * Get position of robot if it advances
+     *
+     * @return RobotPosition
+     * @throws RobotException
+     */
     public function getNextPosition(): RobotPosition
     {
         $position = clone $this;
         $position->move();
+        return $position;
+    }
+
+    /**
+     * Get position on robot if it moves back
+     *
+     * @return RobotPosition
+     * @throws RobotException
+     */
+    public function getBackPosition(): RobotPosition
+    {
+        $position = clone $this;
+        $position->moveBack();
         return $position;
     }
 
@@ -122,12 +169,12 @@ class RobotPosition
     /**
      * @param int $x
      * @return RobotPosition
-     * @throws \Exception
+     * @throws RobotException
      */
     public function setX(int $x): RobotPosition
     {
         if ($x < 0) {
-            throw new \Exception('Negative X coordinate');
+            throw new RobotException('Negative X coordinate');
         }
         $this->x = $x;
         return $this;
@@ -144,12 +191,12 @@ class RobotPosition
     /**
      * @param int $y
      * @return RobotPosition
-     * @throws \Exception
+     * @throws RobotException
      */
     public function setY(int $y): RobotPosition
     {
         if ($y < 0) {
-            throw new \Exception('Negative Y coordinate');
+            throw new RobotException('Negative Y coordinate');
         }
         $this->y = $y;
         return $this;
@@ -166,17 +213,23 @@ class RobotPosition
     /**
      * @param string $facing
      * @return RobotPosition
-     * @throws \Exception
+     * @throws RobotException
      */
     public function setFacing(string $facing): RobotPosition
     {
         if (!in_array($facing, self::FACINGS)) {
-            throw new \Exception('Invalid facing');
+            throw new RobotException('Invalid facing');
         }
         $this->facing = $facing;
         return $this;
     }
 
+    /**
+     * Check if given position is the same, regardless facing
+     *
+     * @param RobotPosition $position
+     * @return bool
+     */
     public function isEqual(RobotPosition $position): bool
     {
         return $this->getX() === $position->getX()

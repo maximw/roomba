@@ -4,6 +4,7 @@
 namespace App\Command;
 
 
+use App\Exceptions\InternalException;
 use App\Service\Runners\JsonRunner;
 use App\Service\Runners\ReportSerializer;
 use Symfony\Component\Console\Command\Command;
@@ -29,17 +30,17 @@ class RunCommand extends Command
         $outputFile = $input->getArgument('outputFile');
 
         if (!file_exists($inputFile) || !is_readable($inputFile) || is_dir($inputFile)) {
-            throw new JsonRunnerException('File is not readable ' . $inputFile);
+            throw new InternalException('File is not readable ' . $inputFile);
         }
 
         if (file_exists($outputFile)) {
             if (!is_writable($outputFile) || is_dir($outputFile)) {
-                throw new JsonRunnerException('File is not writable ' . $outputFile);
+                throw new InternalException('File is not writable ' . $outputFile);
             }
         } else {
             $directory = dirname($outputFile);
             if (!is_dir($directory) || !is_writable($directory)) {
-                throw new JsonRunnerException('File is not writable ' . $outputFile);
+                throw new InternalException('File is not writable ' . $outputFile);
             }
         }
 
@@ -48,7 +49,7 @@ class RunCommand extends Command
         $report = $jsonRunner->run($jsonString);
 
         $serializer = new ReportSerializer($report);
-        file_put_contents($outputFile, json_encode($serializer->asJson(), JSON_PRETTY_PRINT));
+        file_put_contents($outputFile, $serializer->asJson());
 
         return 1;
     }

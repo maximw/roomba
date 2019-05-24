@@ -7,29 +7,14 @@ namespace App\Service\Room;
 use App\Exceptions\InvalidMap;
 use App\Service\Robot\RobotPosition;
 
-class Room
+/**
+ * Represents room map
+ *
+ * Class Room
+ * @package App\Service\Room
+ */
+class Room implements IRoom
 {
-    public const CLEANABLE_CELL = 'S';
-    public const COLUMN_CELL = 'C';
-    public const OUTSIDE_CELL = null;
-
-    /**
-     * All available cell types
-     */
-    public const CELL_TYPES = [
-        self::CLEANABLE_CELL,
-        self::COLUMN_CELL,
-        self::OUTSIDE_CELL,
-    ];
-
-    /**
-     * Robot can't move here
-     */
-    public const OBSTACLES = [
-        self::COLUMN_CELL,
-        self::OUTSIDE_CELL,
-    ];
-
     /**
      * @var array
      */
@@ -50,6 +35,12 @@ class Room
         $this->loadMap($map);
     }
 
+    /**
+     * Check if given position is not
+     *
+     * @param RobotPosition $position
+     * @return bool
+     */
     public function isObstacle(RobotPosition $position): bool
     {
         if ($position->getX() < 0 || $position->getX() >= $this->sizeX) {
@@ -67,6 +58,8 @@ class Room
     }
 
     /**
+     * Load room map from array
+     *
      * @param array $map
      * @throws InvalidMap
      */
@@ -107,7 +100,7 @@ class Room
      * @param string|null $cell
      * @return string
      */
-    protected function normalizeCell(string $cell = null): string
+    protected function normalizeCell(string $cell = null): ?string
     {
         // In description of problem null value is used, but in examples - string "null"
         // It is for supporting both of them

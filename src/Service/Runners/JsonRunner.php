@@ -12,15 +12,25 @@ use App\Service\Room\Room;
 class JsonRunner
 {
 
+    /**
+     * @param string $input
+     * @return Report
+     * @throws JsonRunnerException
+     * @throws \App\Exceptions\RobotException
+     */
     public function run(string $input): Report
     {
         $data = $this->parse($input);
         $room = new Room($data['map']);
-        $robot = new Robot($data['start']['X'], $data['start']['Y'], $data['start']['facing'], $data['battery']);
-        $robot->setRoom($room);
         $commands = new CommandsQueue($data['commands']);
+        $robot = new Robot(
+                (int) $data['start']['X'],
+                (int) $data['start']['Y'],
+                $data['start']['facing'],
+                (int) $data['battery'],
+                $room
+            );
         $robot->run($commands);
-
         return $robot->getReport();
     }
 
@@ -43,15 +53,6 @@ class JsonRunner
             throw new JsonRunnerException('Battery level is not set');
         }
         return $data;
-    }
-
-    protected function outputToFile($outputFile, Report $report)
-    {
-    }
-
-    protected function serializeReport(Report $report): array
-    {
-
     }
 
 }

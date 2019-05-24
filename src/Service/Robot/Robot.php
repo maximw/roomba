@@ -6,13 +6,14 @@ namespace App\Service\Robot;
 
 use App\Exceptions\InvalidCommand;
 use App\Exceptions\InvalidMap;
+use App\Exceptions\RobotException;
 use App\Exceptions\RobotStopped;
 use App\Service\Commands\CommandsQueue;
 use App\Service\Commands\RobotCommand;
 use App\Service\Room\Room;
 use App\Service\Runners\Report;
 
-class Robot
+class Robot implements IRobot
 {
     /**
      * Amount of units of battery consumed by Command
@@ -27,7 +28,7 @@ class Robot
     ];
 
     /**
-     *
+     * It could be loaded to Robot from outside, but according to KISS principle let it be firmware
      */
     protected const BACK_OFF_STRATEGIES = [
         [
@@ -101,7 +102,7 @@ class Robot
     protected $strategyState;
 
     /**
-     *
+     * Prepared back off strategies cache
      *
      * @var CommandsQueue[]
      */
@@ -112,20 +113,34 @@ class Robot
      */
     protected $report;
 
-    public function __construct(int $x, int $y, string $facing, int $batteryLevel)
+    public function __construct(int $x, int $y, string $facing, int $batteryLevel, Room $room)
     {
-        $this->position = new RobotPosition($x, $y, $facing);
-        $this->batteryLevel = $batteryLevel;
+        $this->setPosition($x, $y, $facing);
+        $this->setBatteryLevel($batteryLevel);
+        $this->setRoom($room);
         $this->report = new Report();
         $this->prepareBackOffStrategies();
     }
 
-    public function setRoom(Room $room)
+    public function setPosition(int $x, int $y, string $facing): IRobot
     {
-        $this->room = $room;
+        $this->position = new RobotPosition($x, $y, $facing);
+        return $this;
     }
 
-    public function run(CommandsQueue $commands)
+    public function setBatteryLevel(int $batteryLevel): IRobot
+    {
+        $this->batteryLevel = $batteryLevel;
+        return $this;
+    }
+
+    public function setRoom(Room $room): IRobot
+    {
+        $this->room = $room;
+        return $this;
+    }
+
+    public function run(CommandsQueue $commands): IRobot
     {
         $this->report = new Report();
         $this->commands = $commands;
@@ -138,16 +153,28 @@ class Robot
         } catch (RobotStopped $e) {
         }
         $this->report->setFinalPosition($this->position, $this->batteryLevel);
+        return $this;
     }
 
+    /**
+     * @return Report
+     * @throws RobotException
+     */
     public function getReport(): Report
     {
         if (!$this->report instanceof Report) {
-            throw new \Exception('Report is not initialized');
+            throw new RobotException('Report is not initialized');
         }
         return $this->report;
     }
 
+    /**
+     * Execute one command
+     *
+     * @param RobotCommand $command
+     * @throws RobotException
+     * @throws RobotStopped
+     */
     protected function doCommand(RobotCommand $command)
     {
         if ($this->batteryLevel < $this->getBatteryConsume($command)) {
@@ -166,7 +193,7 @@ class Robot
                 break;
             case RobotCommand::ADVANCE:
                 if ($this->room->isObstacle($this->position->getNextPosition())) {
-                    $this->runNewBackOffStrategy();
+                    $this->runNextBackOffStrategy();
                 } else {
                     $this->resetBackOffStrategy();
                     $this->position->move();
@@ -174,11 +201,16 @@ class Robot
                 }
                 break;
             case RobotCommand::BACK:
-                $this->position->moveBack();
-                $this->report->addVisit($this->position);
+                if ($this->room->isObstacle($this->position->getBackPosition())) {
+                    // Obstacle should not happen during moving back
+                    throw new RobotStopped();
+                } else {
+                    $this->position->moveBack();
+                    $this->report->addVisit($this->position);
+                }
                 break;
             default:
-                throw new \Exception('Unsupported command ' . $command->getCode());
+                throw new RobotException('Unsupported command ' . $command->getCode());
         }
 
         $this->batteryLevel = $this->batteryLevel - $this->getBatteryConsume($command);
@@ -189,15 +221,23 @@ class Robot
         return static::COMMANDS_DRAIN[$command->getCode()];
     }
 
-    protected function runNewBackOffStrategy()
+    /**
+     * Choose and runs the next back off strategy
+     *
+     * @throws RobotStopped
+     */
+    protected function runNextBackOffStrategy()
     {
         $this->strategyState = null === $this->strategyState ? 0 : $this->strategyState + 1;
         if ($this->strategyState >= count(static::BACK_OFF_STRATEGIES)) {
             throw new RobotStopped('Has no back off strategies');
         }
-        $this->commands->addQueue($this->backOffStrategies[$this->strategyState]);
+        $this->commands->prependQueue($this->backOffStrategies[$this->strategyState]);
     }
 
+    /**
+     * Returns to normal mode from back off strategy
+     */
     protected function resetBackOffStrategy()
     {
         $this->strategyState = null;
@@ -206,38 +246,55 @@ class Robot
     /**
      * Check before run
      *
-     * @throws \Exception
+     * @return Robot
+     * @throws InvalidMap
+     * @throws InvalidCommand
+     * @throws RobotException
      */
-    protected function selfCheck()
+    protected function selfCheck(): Robot
     {
         if (!$this->room instanceof Room) {
             throw new InvalidMap('Room map is not loaded');
         }
+        if (!$this->report instanceof Report) {
+            throw new InvalidMap('Report is not initialized');
+        }
         $this->checkCommandsQueue();
+        if ($this->room->isObstacle($this->position)) {
+            throw new RobotException('Invalid initial position');
+        }
+        return $this;
     }
 
-    protected function checkCommandsQueue()
+    /**
+     * Check if all loaded commands could be executed
+     *
+     * @return Robot
+     * @throws InvalidCommand
+     */
+    protected function checkCommandsQueue(): Robot
     {
         $commands = $this->commands->getQueue();
         foreach ($commands as $command) {
             if (!in_array($command->getCode(), array_keys(static::COMMANDS_DRAIN))) {
                 throw new InvalidCommand('Unsupported command ' . $command->getCode());
             }
-            if (in_array($command->getCode(), array_keys(static::FORBIDDEN_COMMANDS))) {
+            if (in_array($command->getCode(), static::FORBIDDEN_COMMANDS)) {
                 throw new InvalidCommand('Unsupported command ' . $command->getCode());
             }
         }
+        return $this;
     }
-
 
     /**
      * Prepare command queues for back off strategies
      */
-    protected function prepareBackOffStrategies()
+    protected function prepareBackOffStrategies(): Robot
     {
         foreach (static::BACK_OFF_STRATEGIES as $commands) {
             $this->backOffStrategies[] = new CommandsQueue($commands);
         }
+        return $this;
     }
 
 }

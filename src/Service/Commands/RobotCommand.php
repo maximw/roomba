@@ -8,6 +8,7 @@ use App\Exceptions\InvalidCommand;
 
 class RobotCommand
 {
+    // List of all available commands for all Robot models
     public const TURN_LEFT = 'TL';
     public const TURN_RIGHT = 'TR';
     public const ADVANCE = 'A';
@@ -41,6 +42,12 @@ class RobotCommand
         return $this->code;
     }
 
+    /**
+     * It could be omitted, depends of expected input format
+     *
+     * @param string $code
+     * @return false|mixed|string|string[]|null
+     */
     protected function normalizeCommand(string $code)
     {
         return mb_strtoupper($code, 'UTF-8');

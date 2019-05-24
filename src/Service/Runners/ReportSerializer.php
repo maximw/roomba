@@ -33,23 +33,23 @@ class ReportSerializer
         $serializedData = [];
 
         $serializedData['visited'] = [];
-        foreach ($report->getVisited() as $position) {
+        foreach ($this->report->getVisited() as $position) {
             $serializedData['visited'][] = ['X' => $position->getX(), 'Y' => $position->getY()];
         }
 
         $serializedData['cleaned'] = [];
-        foreach ($report->getCleaned() as $position) {
+        foreach ($this->report->getCleaned() as $position) {
             $serializedData['cleaned'][] = ['X' => $position->getX(), 'Y' => $position->getY()];
         }
 
 
         $serializedData['final'] = [
-            'X' => $report->getFinal()->getX(),
-            'Y' => $report->getFinal()->getY(),
-            'facing' => $report->getFinal()->getFacing(),
+            'X' => $this->report->getFinal()->getX(),
+            'Y' => $this->report->getFinal()->getY(),
+            'facing' => $this->report->getFinal()->getFacing(),
             ];
 
-        $serializedData['battery'] = $report->getBattery();
+        $serializedData['battery'] = $this->report->getBattery();
 
         return $serializedData;
     }
