@@ -5,48 +5,51 @@ namespace App\Service\Runners;
 
 
 use App\Exceptions\JsonRunnerException;
+use App\Service\Commands\CommandsQueue;
+use App\Service\Robot\Robot;
+use App\Service\Room\Room;
 
 class JsonRunner
 {
 
-    public function run(string $inputFile, string $outputFile)
+    public function run(string $input): Report
     {
-        if (!file_exists($inputFile) || !is_readable($inputFile) || is_dir($inputFile)) {
-            throw new JsonRunnerException('File is not readable ' . $inputFile);
-        }
+        $data = $this->parse($input);
+        $room = new Room($data['map']);
+        $robot = new Robot($data['start']['X'], $data['start']['Y'], $data['start']['facing'], $data['battery']);
+        $robot->setRoom($room);
+        $commands = new CommandsQueue($data['commands']);
+        $robot->run($commands);
 
-        if (file_exists($outputFile)) {
-            if (!is_writable($outputFile) || is_dir($outputFile)) {
-                throw new JsonRunnerException('File is not writable ' . $outputFile);
-            }
-        } else {
-            $directory = dirname($outputFile);
-            if (!is_dir($directory) || !is_writable($directory)) {
-                throw new JsonRunnerException('File is not writable ' . $outputFile);
-            }
-        }
-
-        $data = $this->loadFromFile($inputFile);
-
+        return $robot->getReport();
     }
 
-    protected function loadFromFile(string $inputFile): array
+    protected function parse(string $input): array
     {
-        $json = file_get_contents($inputFile);
-        $data = json_decode($json, true);
+        $data = json_decode($input, true);
         if (json_last_error()) {
             throw new JsonRunnerException('Bad JSON format ' . json_last_error_msg());
         }
         if (empty($data['map'])) {
             throw new JsonRunnerException('Map is empty');
         }
-        if (empty($data['start'])) {
-            throw new JsonRunnerException('Map is empty');
+        if (!isset($data['start']['X'])
+            || !isset($data['start']['Y'])
+            || !isset($data['start']['facing'])
+        ) {
+            throw new JsonRunnerException('Invalid start position');
         }
-
+        if (!isset($data['battery'])) {
+            throw new JsonRunnerException('Battery level is not set');
+        }
+        return $data;
     }
 
-    protected function outputToFile()
+    protected function outputToFile($outputFile, Report $report)
+    {
+    }
+
+    protected function serializeReport(Report $report): array
     {
 
     }

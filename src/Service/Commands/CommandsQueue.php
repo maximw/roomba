@@ -23,11 +23,20 @@ class CommandsQueue
      * Add new Command to queue
      *
      * @param RobotCommand $command
+     * @return CommandsQueue
      */
-    public function add(RobotCommand $command)
+    public function add(RobotCommand $command): CommandsQueue
     {
         array_push($this->queue, $command);
+        return $this;
     }
+
+    public function addQueue(CommandsQueue $queue): CommandsQueue
+    {
+        $this->queue = array_merge($queue->getQueue(), $this->queue);
+        return $this;
+    }
+
     /**
      * Return the first element
      *
@@ -39,8 +48,8 @@ class CommandsQueue
         if ($this->isEmpty()) {
             throw new CommandsQueueEmpty();
         }
-        $token = end($this->queue);
-        return $token;
+        $command = end($this->queue);
+        return $command;
     }
 
     /**
@@ -57,14 +66,19 @@ class CommandsQueue
         $command = array_shift($this->queue);
         return $command;
     }
+
     /**
      * Check if queue is empty
      *
      * @return bool
      */
-    public function isEmpty():bool
+    public function isEmpty(): bool
     {
         return empty($this->queue);
     }
 
+    public function getQueue(): array
+    {
+        return $this->queue;
+    }
 }

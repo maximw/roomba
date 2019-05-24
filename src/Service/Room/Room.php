@@ -5,6 +5,7 @@ namespace App\Service\Room;
 
 
 use App\Exceptions\InvalidMap;
+use App\Service\Robot\RobotPosition;
 
 class Room
 {
@@ -12,14 +13,20 @@ class Room
     public const COLUMN_CELL = 'C';
     public const OUTSIDE_CELL = null;
 
+    /**
+     * All available cell types
+     */
     public const CELL_TYPES = [
         self::CLEANABLE_CELL,
         self::COLUMN_CELL,
         self::OUTSIDE_CELL,
     ];
 
+    /**
+     * Robot can't move here
+     */
     public const OBSTACLES = [
-        self::CLEANABLE_CELL,
+        self::COLUMN_CELL,
         self::OUTSIDE_CELL,
     ];
 
@@ -28,8 +35,14 @@ class Room
      */
     protected $map = [];
 
+    /**
+     * @var int
+     */
     protected $sizeX;
 
+    /**
+     * @var int
+     */
     protected $sizeY;
 
     public function __construct(array $map)
@@ -37,27 +50,26 @@ class Room
         $this->loadMap($map);
     }
 
-    public function isObstacle(int $x, int $y, string $direction)
+    public function isObstacle(RobotPosition $position): bool
     {
+        if ($position->getX() < 0 || $position->getX() >= $this->sizeX) {
+            return true;
+        }
+        if ($position->getY() < 0 || $position->getY() >= $this->sizeY) {
+            return true;
+        }
 
+        if (in_array($this->map[$position->getY()][$position->getX()], static::OBSTACLES)) {
+            return true;
+        }
+
+        return false;
     }
 
-    public function validatePosition(int $x, int $y): bool
-    {
-        if ($x < 0 || $x >= $this->sizeX) {
-            return false;
-        }
-        if ($y < 0 || $y >= $this->sizeY) {
-            return false;
-        }
-
-        if (in_array($this->map[$x][$y], static::OBSTACLES)) {
-            return false;
-        }
-
-        return true;
-    }
-
+    /**
+     * @param array $map
+     * @throws InvalidMap
+     */
     protected function loadMap(array $map): void
     {
         if (empty($map)) {
@@ -91,8 +103,17 @@ class Room
         $this->sizeY = count($map);
     }
 
-    protected function normalizeCell(string $cell = null)
+    /**
+     * @param string|null $cell
+     * @return string
+     */
+    protected function normalizeCell(string $cell = null): string
     {
+        // In description of problem null value is used, but in examples - string "null"
+        // It is for supporting both of them
+        if ('null' === $cell) {
+            $cell = null;
+        }
         return static::OUTSIDE_CELL == $cell ? static::OUTSIDE_CELL : mb_strtoupper($cell, 'UTF-8');
     }
 

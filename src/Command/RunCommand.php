@@ -5,6 +5,7 @@ namespace App\Command;
 
 
 use App\Service\Runners\JsonRunner;
+use App\Service\Runners\ReportSerializer;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -18,37 +19,37 @@ class RunCommand extends Command
         $this->setName('run')
             ->setDescription('Run robot from JSON file')
             ->setHelp('Run robot from JSON file')
-            ->addArgument('inputFile', InputArgument::REQUIRED, 'Input json file')
-            ->addArgument('outputFile', InputArgument::REQUIRED, 'Output json file');
+            ->addArgument('inputFile', InputArgument::REQUIRED, 'Input JSON file')
+            ->addArgument('outputFile', InputArgument::REQUIRED, 'Output JSON file');
     }
+
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $inputFile = $input->getArgument('inputFile');
         $outputFile = $input->getArgument('outputFile');
 
-        $jsonRunner = new JsonRunner($inputFile, $outputFile);
-        $jsonRunner->run();
-        return 1;
-        /*
-        try {
-
-
-            Out::setOutput($output);
-            In::init($input, $output, $this->getHelper('question'));
-            $startFile = realpath($input->getArgument('scenario'));
-            chdir(dirname($startFile));
-            if ($input->getOption('config')) {
-                Config::loadFromFile($input->getOption('config'), true);
-            } else {
-                Config::loadFromFile('./config.yaml', false);
-            }
-            Config::loadInput($input);
-            $tester = new Tester($startFile, $input->getOption('junit-report'));
-            return $tester->run();
-        } catch (InternalError $e) {
-            Out::printError($e);
-            return 1;
+        if (!file_exists($inputFile) || !is_readable($inputFile) || is_dir($inputFile)) {
+            throw new JsonRunnerException('File is not readable ' . $inputFile);
         }
-        */
+
+        if (file_exists($outputFile)) {
+            if (!is_writable($outputFile) || is_dir($outputFile)) {
+                throw new JsonRunnerException('File is not writable ' . $outputFile);
+            }
+        } else {
+            $directory = dirname($outputFile);
+            if (!is_dir($directory) || !is_writable($directory)) {
+                throw new JsonRunnerException('File is not writable ' . $outputFile);
+            }
+        }
+
+        $jsonString = file_get_contents($inputFile);
+        $jsonRunner = new JsonRunner();
+        $report = $jsonRunner->run($jsonString);
+
+        $serializer = new ReportSerializer($report);
+        file_put_contents($outputFile, json_encode($serializer->asJson(), JSON_PRETTY_PRINT));
+
+        return 1;
     }
 }
