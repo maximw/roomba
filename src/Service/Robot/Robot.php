@@ -140,6 +140,16 @@ class Robot implements IRobot
         return $this;
     }
 
+    /**
+     * Run Robot with Commands
+     *
+     * @param CommandsQueue $commands
+     * @return IRobot
+     * @throws InvalidCommand
+     * @throws InvalidMap
+     * @throws RobotException
+     * @throws \App\Exceptions\CommandsQueueEmpty
+     */
     public function run(CommandsQueue $commands): IRobot
     {
         $this->report = new Report();
@@ -147,7 +157,7 @@ class Robot implements IRobot
         $this->selfCheck();
         $this->report->addVisit($this->position);
         try {
-            while (!$commands->isEmpty()) {
+            while (!$this->commands->isEmpty()) {
                 $this->doCommand($this->commands->next());
             }
         } catch (RobotStopped $e) {
