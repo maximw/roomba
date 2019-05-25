@@ -57,3 +57,9 @@ cache-control: no-cache
   "battery": 80
 }
 ```
+
+## Run tests
+
+```
+php ./bin/phpunit
+```
